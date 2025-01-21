@@ -1,0 +1,53 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# Script for post-processing of fMRI data using XCP (eXtreme Cortical Processing).
+# This script applies post-processing steps to the fMRI data that has already been preprocessed 
+# by FMRIPREP and prepares it for further analysis such as connectivity or graph-theoretical analysis.
+# The script is designed to be run as a SLURM job array to process multiple participants in parallel.
+#
+# Parameters:
+# - `--job-name`: Specifies the job name as `fmriprep_post`.
+# - `--partition`: Submits the job to the `bme_cpu` partition.
+# - `--time`: Sets a time limit of 2 hours for the job.
+# - `--cpus-per-task`: Allocates 8 CPU cores per task.
+# - `-o`: Defines the output file for standard output (`xcp.out`).
+# - `-e`: Defines the error output file for standard error (`xcp.err`).
+# - `--array`: Defines an array job to process participants from index 0 (for a list of participants, e.g., `sub-CQ????`).
+#
+# Reference
+# fMRIprep: https://xcp-d.readthedocs.io/en/latest/index.html
+#
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=fmriprep_post            # Job name (used for tracking)
+#SBATCH --partition=bme_cpu                 # Queue for the CPU resources
+#SBATCH --time=2:00:00                      # Time limit for the job (2 hours)
+#SBATCH --cpus-per-task=8                   # Number of CPU cores allocated per task
+#SBATCH -o xcp.out                          # Standard output file
+#SBATCH -e xcp.err                          # Error output file
+#SBATCH --array=0                           # Array job to process participant 0 onwards
+
+# Load Singularity module and set environment variables
+# - Singularity is used to run the XCP container, which applies various post-processing steps to the fMRI data.
+module load apps/7/singularity/3.5.2         # Load Singularity module (version 3.5.2)
+export bidsdir=$HOME/BIDS_Data/derivative    # Set the path to the derivative BIDS directory where preprocessed data is stored
+
+# Set participant-specific variables and define paths
+# - Creates an array of participant IDs based on `sub-CQ????` format, processes participants one by one in parallel.
+cd $HOME/BIDS_Data                           # Navigate to the BIDS data directory
+participant=(sub-CQ????)                     # Create an array of participant IDs (e.g., sub-CQ0001, sub-CQ0002, etc.)
+
+# Run XCP post-processing using Singularity container
+# - This command runs the XCP container to apply additional post-processing steps to fMRI data.
+cd $HOME/fmriprep/                            # Navigate to the directory where the XCP Singularity container is located
+
+singularity run xcp_d-latest.sif \            # Run the XCP container (`xcp_d-latest.sif` for the latest version)
+    $bidsdir \                               # Input directory for preprocessed BIDS data (from FMRIPREP output)
+    $bidsdir/XCP \                           # Output directory where processed data will be stored (inside the `XCP` subdirectory)
+    participant                              # Process data for the current participant based on SLURM array task index
+    --participant-label ${participant[$SLURM_ARRAY_TASK_ID]} \   # Specify the participant label using the SLURM array task ID
+    --input-type fmriprep                     # Indicates that the input data type is preprocessed FMRIPREP output
+    --warp-surfaces-native2std                # Apply warping from native space to standard space for surface data (e.g., cortical surfaces)
+    --fd-thresh 0.2                           # Set the threshold for framewise displacement (FD) to 0.2 mm to remove motion outliers
+    --cifti                                  # Output CIFTI files (connectivity matrix or surface-based analysis)
+    --nuisance-regressors 36P                 # Use 36 physiological nuisance regressors for motion and physiological noise correction

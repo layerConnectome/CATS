@@ -1,0 +1,91 @@
+#!/bin/bash
+# ----------------------------------------------------------------------
+# This script performs local gyrification index (LGI) computation and 
+# statistical processing of FreeSurfer outputs for multiple subjects.
+# It uses the Slurm workload manager for parallel processing on a computing cluster.
+#
+# Key Steps:
+# 1. Compute local gyrification index (LGI) using `recon-all`.
+# 2. Use `mris_anatomical_stats` to generate LGI statistics for both hemispheres.
+# 3. Generate summary tables for LGI thickness measures for the left and right hemispheres.
+#
+# Parameters:
+# - `--job-name`: Name of the job for monitoring in the Slurm queue.
+# - `--partition`: Name of the partition/queue to run the job.
+# - `--time`: Maximum time allowed (240 hours).
+# - `--cpus-per-task`: Number of CPU cores allocated to each task.
+# - `--mem`: Memory allocated per task (8 GB).
+# - `--array`: Array job indices corresponding to the files being processed.
+#
+# Output:
+# - LGI statistics per subject for left and right hemispheres:
+#   - `lh.aparc.a2009s_lgi.stats`
+#   - `rh.aparc.a2009s_lgi.stats`
+# - Summary tables for thickness measures:
+#   - `a2009s_lgi_lh.txt`: Left hemisphere LGI thickness summary.
+#   - `a2009s_lgi_rh.txt`: Right hemisphere LGI thickness summary.
+#
+# Notes:
+# - Update file naming conventions and array size (`--array`) as necessary.
+# - Ensure FreeSurfer environment variables and paths are correctly set.
+#
+# Reference:
+# - FreeSurfer Documentation: https://surfer.nmr.mgh.harvard.edu/
+# ----------------------------------------------------------------------
+
+#SBATCH --job-name=freesurfer             # Name of the job
+#SBATCH --partition=bme_cpu               # Partition/queue for the job
+#SBATCH --time=240:00:00                  # Maximum runtime (240 hours)
+#SBATCH --cpus-per-task=8                 # Number of CPU cores per task
+#SBATCH --mail-user=""                    # Email for notifications (add your email address)
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Email notifications for job states
+#SBATCH --mem=8g                          # Memory allocation (8 GB per job)
+#SBATCH --array=0-132                     # Array job index range (adjust as needed)
+
+# Set up FreeSurfer environment
+export FREESURFER_HOME=/public/home/mazhw_i/freesurfer/freesurfer   # Path to FreeSurfer
+export SUBJECTS_DIR=/public/home/mazhw_i/freesurfer/practice/CQ_data/T1w  # Directory for input and output data
+source $FREESURFER_HOME/SetUpFreeSurfer.sh                         # Load FreeSurfer environment
+export OMP_NUM_THREADS=4                                           # Number of threads for parallel processing
+
+# Change to the directory containing input NIfTI files
+cd $SUBJECTS_DIR
+files=(*.nii)                                                      # List of all `.nii` files in the directory
+
+# Step 1: Compute local gyrification index (LGI) for the current subject
+# - `-subject`: Specifies the subject name (derived from the NIfTI filename).
+# - `-localGI`: Enables computation of local gyrification index.
+recon-all -subject ${files[$SLURM_ARRAY_TASK_ID]//.nii.gz} -localGI
+
+# Step 2: Generate LGI statistics for the left hemisphere
+# - `-a`: Path to the annotation file (`lh.aparc.a2009s.annot`).
+# - `-t`: Specifies the statistical measure to compute (`pial_lgi`).
+# - `-f`: Output file for the LGI statistics of the left hemisphere.
+mris_anatomical_stats \
+    -a ${SUBJECTS_DIR}/${files[$SLURM_ARRAY_TASK_ID]//.nii}/label/lh.aparc.a2009s.annot \
+    -t pial_lgi \
+    -f ${SUBJECTS_DIR}/${files[$SLURM_ARRAY_TASK_ID]//.nii}/stats/lh.aparc.a2009s_lgi.stats \
+    ${files[$SLURM_ARRAY_TASK_ID]//.nii} lh
+
+# Step 3: Create a summary table of left hemisphere LGI thickness measures
+# - `--subjects CQ_*`: Includes subjects matching the `CQ_*` naming pattern.
+# - `--hemi lh`: Specifies left hemisphere.
+# - `--meas thickness`: Extracts thickness measures.
+# - `--parc aparc.a2009s_lgi`: Specifies the parcellation scheme.
+# - `--tablefile`: Output file for the summary table.
+aparcstats2table --subjects CQ_* --hemi lh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_lh.txt
+
+# Step 4: Generate LGI statistics for the right hemisphere
+# - Similar to the left hemisphere, but with `rh` for the right hemisphere.
+mris_anatomical_stats \
+    -a ${SUBJECTS_DIR}/${files[$SLURM_ARRAY_TASK_ID]//.nii}/label/rh.aparc.a2009s.annot \
+    -t pial_lgi \
+    -f ${SUBJECTS_DIR}/${files[$SLURM_ARRAY_TASK_ID]//.nii}/stats/rh.aparc.a2009s_lgi.stats \
+    ${files[$SLURM_ARRAY_TASK_ID]//.nii} rh
+
+# Step 5: Create a summary table of right hemisphere LGI thickness measures
+# - Similar to the left hemisphere summary table but for the right hemisphere.
+aparcstats2table --subjects CQ_* --hemi rh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_rh.txt
+
+
+

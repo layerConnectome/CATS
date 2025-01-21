@@ -1,0 +1,83 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# Script to preprocess diffusion MRI (dMRI) data using FSL tools.
+# Steps include reorientation, extraction of b0 images, brain masking, correction
+# for eddy currents, and tensor fitting.
+#
+# Usage:
+# - Submit the script to the Slurm cluster using the `sbatch` command:
+#   sbatch script_name.sh
+# - Ensure all dMRI NIfTI (.nii) files are in the specified `PATHS`.
+# - Modify the parameters (e.g., memory, time limit, and array size) as needed.
+#
+# Parameters:
+# - `--job-name`: Job name (`fsl_pre`).
+# - `--partition`: Queue/partition for the job (`bme_cpu`).
+# - `--time`: Maximum runtime (2 hours).
+# - `--cpus-per-task`: Number of CPU cores per task (8).
+# - `--mem`: Memory allocation (8 GB per task).
+# - `--array`: Array of participant indices (0-132).
+#
+# Reference
+# FSL: https://fsl.fmrib.ox.ac.uk/fsl/docs/#/diffusion/index
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=fsl_pre                  # Job name
+#SBATCH --partition=bme_cpu                 # Partition/queue
+#SBATCH --time=2:00:00                      # Maximum runtime
+#SBATCH --cpus-per-task=8                   # CPUs per task
+#SBATCH --mail-user=""                      # Email for notifications
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS # Notification types
+#SBATCH --mem=8g                            # Memory allocation (8 GB)
+#SBATCH --array=0-132                       # Job array range
+
+# Load FSL module
+module load apps/fsl/6.0
+source ${FSLDIR}/etc/fslconf/fsl.sh         # Source FSL environment
+
+# Define participant paths and input files
+cd $HOME/BIDS_Data                          # Navigate to BIDS dataset directory
+participant=(sub-*)                         # Array of participant directories
+PATHS=($HOME/BIDS_Data/sub*/raw/sub*/dwi/)  # Paths to dMRI data
+path=${PATHS[$SLURM_ARRAY_TASK_ID]}         # Path for the current participant
+
+# Define filenames for the current participant
+sub=${participant[$SLURM_ARRAY_TASK_ID]}_dwi.nii    # Input diffusion data
+rsub=r${participant[$SLURM_ARRAY_TASK_ID]}_dwi.nii  # Reoriented diffusion data
+bvec=${participant[$SLURM_ARRAY_TASK_ID]}_dwi.bvec  # b-vector file
+bval=${participant[$SLURM_ARRAY_TASK_ID]}_dwi.bval  # b-value file
+
+# Preprocessing
+cd $path                                    # Navigate to participant's dMRI directory
+fslreorient2std ${sub} ${rsub}             # Reorient diffusion data to standard orientation
+fslroi ${rsub} b0.nii 0 1                  # Extract the first b0 image
+fslmaths b0.nii -Tmean hifi_nodif          # Compute the mean of the b0 image
+bet hifi_nodif hifi_nodif_brain -m -f 0.2  # Brain extraction with BET (fractional intensity=0.2)
+
+# Eddy current correction
+# The eddy current correction is a process used in diffusion MRI to correct for distortions caused by eddy currents.
+eddy --imain=${rsub} \
+     --mask=hifi_nodif_brain_mask \  # Specifies the brain mask used for the correction
+     --index=index.txt \  # Specifies the index file containing information about the diffusion-weighted images
+     --acqp=acqparams.txt \  # Specifies the acquisition parameters file
+     --bvecs=${bvec} \  # Specifies the file containing the b-vectors, which describe the diffusion gradient directions
+     --bvals=${bval} \  # Specifies the file containing the b-values, which describe the strength of the diffusion gradients
+     --out=eddy_unwarped_images \  # Specifies the output directory for the corrected images
+     --fwhm=0 \  # Sets the full width at half maximum for the smoothing filter to 0, meaning no smoothing
+     --flm=quadratic \  # Specifies the fitting model to use, in this case, a quadratic model
+     --data_is_shelled \  # Indicates that the data is in a shelled format, which is a specific way of organizing diffusion data
+
+# Diffusion tensor fitting
+# The diffusion tensor model is a mathematical model that describes the diffusion of water molecules in tissue.
+dtifit --data=eddy_unwarped_images.nii.gz \  # Specifies the input data, which are the eddy current corrected images
+       --mask=hifi_nodif_brain_mask.nii.gz \  # Specifies the brain mask used for the fitting process
+       --bvecs=${bvec} \  # Specifies the file containing the b-vectors for the fitting process
+       --bvals=${bval} \  # Specifies the file containing the b-values for the fitting process
+       --out=dti \  # Specifies the output directory for the diffusion tensor imaging results
+
+# Copy FA and MD maps to the respective TBSS directories
+cp ${participant[$SLURM_ARRAY_TASK_ID]}/raw/${participant[$SLURM_ARRAY_TASK_ID]}/dwi/dti_FA.nii.gz \
+   $HOME/BIDS_Data/newderivative/TBSS_FA/${participant[$SLURM_ARRAY_TASK_ID]}_dti_FA.nii.gz
+
+cp ${participant[$SLURM_ARRAY_TASK_ID]}/raw/${participant[$SLURM_ARRAY_TASK_ID]}/dwi/dti_MD.nii.gz \
+   $HOME/BIDS_Data/newderivative/TBSS_MD/${participant[$SLURM_ARRAY_TASK_ID]}_dti_FA.nii.gz

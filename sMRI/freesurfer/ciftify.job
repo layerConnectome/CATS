@@ -1,0 +1,64 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# This script performs cortical surface reconstruction and resampling using 
+# the `ciftify_recon_all` tool in a Singularity container. It is designed to 
+# process T1-weighted MRI data and generate HCP-style CIFTI outputs.
+#
+# Steps:
+# 1. Load the Singularity module for containerized execution.
+# 2. Define the BIDS-formatted directory containing input data.
+# 3. Use `ciftify_recon_all` to process the subject's T1-weighted MRI data.
+#
+# Parameters:
+# - `--job-name`: Job name for monitoring in Slurm.
+# - `--partition`: Specifies the partition/queue for job scheduling.
+# - `--time`: Sets the maximum runtime (20 hours).
+# - `--cpus-per-task`: Allocates 4 CPU cores per task.
+# - `--mem`: Allocates 4 GB of memory for each task.
+# - `--array`: Specifies the job array index range (0 in this case).
+# - `--mail-user`: Email for job notifications.
+# - `--mail-type`: Specifies when to send email notifications.
+#
+# Output:
+# - Processed HCP-style CIFTI data stored in the `HCPdata` directory.
+#
+# Notes:
+# - Ensure the Singularity container file (`fmriprep_ciftify-latest.sif`) exists.
+# - Adjust the directory paths and filenames as per your data structure.
+# - Update the `--array` parameter if processing multiple subjects.
+#
+#Reference
+#fmriprep_ciftify_BIDS-app: https://edickie.github.io/ciftify/#/02_bids-app
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=ciftify             # Name of the job
+#SBATCH --partition=bme_cpu            # Partition/queue for the job
+#SBATCH --time=20:00:00                # Maximum runtime (20 hours)
+#SBATCH --cpus-per-task=4              # Number of CPU cores allocated
+#SBATCH --mail-user="endeavor1111@163.com"  # Email for job notifications
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Job states to send email for
+#SBATCH --mem=4g                       # Memory allocation (4 GB per task)
+#SBATCH --array=0                      # Job array index range (adjust as needed)
+
+# Load the Singularity module
+module load 7/apps/singularity/3.5.2   # Load Singularity version 3.5.2
+
+# Set the base directory for BIDS-formatted data
+export bidsdir=$HOME/freesurfer/practice/CQ_data  # Base directory for input data
+
+# Change to the directory containing T1-weighted NIfTI files
+cd ${bidsdir}/T1w/
+subjects=(CQ_*.nii)                   # Create an array of all NIfTI files
+
+# Change to the directory containing the Singularity container
+cd $HOME/ciftify
+
+# Execute the `ciftify_recon_all` command inside the Singularity container
+singularity exec fmriprep_ciftify-latest.sif \
+    ciftify_recon_all \
+    --fs-subjects-dir ${bidsdir}/T1w \              # Directory with FreeSurfer subjects
+    --ciftify-work-dir ${bidsdir}/HCPdata \         # Output directory for HCP-style data
+    ${subjects[$SLURM_ARRAY_TASK_ID]//.nii} \      # Subject ID (removes `.nii` from filename)
+    --fs-license $HOME/freesurfer/freesurfer/license.txt \  # Path to FreeSurfer license file
+    --resample-to-T1w32k \                         # Resample output to 32k mesh
+    --surf-reg MSMSulc                             # Use MSMSulc surface registration

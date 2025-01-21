@@ -1,0 +1,68 @@
+#!/bin/bash 
+# ----------------------------------------------------------------------
+# This script is designed to run FreeSurfer's `recon-all` command on multiple
+# T1-weighted MRI images in parallel using the Slurm workload manager. It uses 
+# an array job to process multiple input files concurrently. The `recon-all` 
+# command performs cortical reconstruction and volumetric segmentation for 
+# brain imaging data.
+#
+# Usage:
+# - Submit the script to the Slurm cluster using the `sbatch` command:
+#   sbatch script_name.sh
+# - Ensure all T1-weighted NIfTI (.nii) files are in the specified `SUBJECTS_DIR`.
+# - Modify the parameters (e.g., memory, time limit, and array size) as needed.
+#
+# Parameters:
+# - `--job-name`: The name of the Slurm job (appears in queue monitoring).
+# - `--partition`: The partition/queue to which the job is submitted.
+# - `--time`: Maximum allowed runtime for the job.
+# - `--cpus-per-task`: Number of CPUs allocated per task.
+# - `--mem`: Memory allocated per job.
+# - `--array`: Specifies the range of array indices (one per input file).
+# - `FREESURFER_HOME`: Path to the FreeSurfer installation directory.
+# - `SUBJECTS_DIR`: Directory containing the input data and output results.
+#
+# Example:
+# - If there are 133 T1-weighted MRI files in `SUBJECTS_DIR`, set `--array=0-132`.
+# - Adjust `OMP_NUM_THREADS` to match the number of CPUs per task.
+#
+# Notes:
+# - Ensure FreeSurfer is installed and properly configured.
+# - Input files must have `.nii` extension.
+# - Outputs will be saved in subdirectories within `SUBJECTS_DIR`, named after
+#   each input file (excluding the `.nii` extension).
+#
+# Reference:
+# - FreeSurfer Documentation: https://surfer.nmr.mgh.harvard.edu/
+# ----------------------------------------------------------------------
+
+#SBATCH --job-name=freesurfer             # Name of the Slurm job
+#SBATCH --partition=bme_cpu               # Partition/queue name
+#SBATCH --time=240:00:00                  # Maximum job runtime (240 hours)
+#SBATCH --cpus-per-task=8                 # Number of CPUs per task
+#SBATCH --mail-user=""                    # Email for notifications (add your email)
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Email notifications for job states
+#SBATCH --mem=8g                          # Memory allocation per job (8 GB)
+#SBATCH --array=0-132                     # Array job index range (adjust to match the number of files)
+
+# Set up FreeSurfer environment
+export FREESURFER_HOME=/public/home/mazhw_i/freesurfer/freesurfer   # Path to FreeSurfer
+export SUBJECTS_DIR=/public/home/mazhw_i/freesurfer/practice/CQ_data/T1w  # Input and output directory
+source $FREESURFER_HOME/SetUpFreeSurfer.sh                         # Load FreeSurfer environment
+export OMP_NUM_THREADS=4                                           # Number of threads for parallel processing
+
+# Change to the directory containing the input files
+cd $SUBJECTS_DIR
+
+# Get a list of all `.nii` files in the directory
+files=(*.nii)
+
+# Run `recon-all` on the file corresponding to the current array index
+# - `-i`: Input file
+# - `-subject`: Name of the subject (derived from file name without `.nii`)
+# - `-all`: Perform all recon-all steps
+# - `-openmp`: Use OpenMP for parallel processing
+recon-all -i ${files[$SLURM_ARRAY_TASK_ID]} \
+          -subject ${files[$SLURM_ARRAY_TASK_ID]//.nii} \
+          -all \
+          -openmp 4

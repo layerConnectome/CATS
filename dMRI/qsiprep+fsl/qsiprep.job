@@ -1,0 +1,62 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# Script for running QSIPrep preprocessing on DWI (Diffusion-Weighted Imaging) data.
+# This script uses Singularity to run QSIPrep for the preprocessing of the participant's DWI data.
+# The script is designed to be executed in a SLURM batch environment using job array indexing for parallel processing.
+#
+# Parameters:
+# - `--job-name`: Specifies the job name as `qsiprep`.
+# - `--partition`: Submits the job to the `bme_cpu` queue.
+# - `--time`: Sets a runtime limit of 20 hours for the job.
+# - `--cpus-per-task`: Allocates 8 CPU cores for the job.
+# - `--mem`: Allocates 32 GB of memory for the task.
+# - `-o`: Standard output log file (`qsiprep.out`).
+# - `-e`: Error log file (`qsiprep.err`).
+# - `--array`: Submits an array job to process multiple participants from index 0.
+# 
+# Outputs:
+# - This script generates preprocessed DWI data (including the reconstruction and other preprocessing steps)
+# - Results are stored in the specified derivative directory for further analysis.
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=qsiprep                 # Job name (used for job tracking)
+#SBATCH --partition=bme_cpu               # Queue for computation (bme_cpu)
+#SBATCH --time=20:00:00                   # Time limit for the job (20 hours)
+#SBATCH --cpus-per-task=8                # Number of CPU cores to allocate per task
+#SBATCH --mem=32g                        # Memory allocation for the job (32 GB)
+#SBATCH -o qsiprep.out                   # Standard output file for logs
+#SBATCH -e qsiprep.err                   # Error output file for logs
+#SBATCH --array=0                        # Array job index (starts at 0)
+
+# Load Singularity module and set up environment
+# - Singularity is used to run the QSIPrep Docker container for DWI preprocessing.
+module load apps/7/singularity/3.5.2       # Load Singularity module (version 3.5.2)
+export bidsdir=$HOME/BIDS_Data             # Set the directory where BIDS data is located
+
+# Set participant-specific variables and working directory
+# - Defines the array of participant IDs and sets the working directory for QSIPrep.
+cd $HOME/BIDS_Data                         # Navigate to the BIDS data directory
+participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-01, sub-02, etc.)
+work_dir=$HOME/hcp-d/out/qsiprep_work      # Define the working directory for QSIPrep output
+
+# Run QSIPrep using Singularity
+# - Runs the `qsiprep` container with various options to preprocess the DWI data.
+cd $HOME/qsiprep/                          # Navigate to the folder where the QSIPrep Singularity container is stored
+
+singularity run qsiprep-latest.sif \        # Execute the QSIPrep container
+    ${bidsdir}                             # Input BIDS directory containing participant data
+    ${bidsdir}/derivative                  # Output directory for preprocessed data
+    participant                           # Process participants in array mode
+    -w $work_dir                           # Specify the working directory to store intermediate files
+    --participant_label ${participant[$SLURM_ARRAY_TASK_ID]} \  # Specify the current participant to process (from SLURM job array)
+    --fs_license_file $HOME/Downloads/freesurfer/license.txt \  # FreeSurfer license file (required for FreeSurfer processing)
+    --separate_all_dwis                    # Separate all DWI files (useful for datasets with multiple DWI files)
+    --output_resolution 1                  # Set the output resolution of the images to 1mm
+    --notrack                              # Disable tracking during execution (saves time, especially for large jobs)
+    --nthreads 4                           # Use 4 threads for parallel processing within the container
+    --mem_mb 16000                         # Allocate 16 GB of memory per process (16000 MB)
+    --stop-on-first-crash                  # Stop processing if the first crash occurs
+    --skip_bids_validation                 # Skip BIDS validation (useful for non-standard data or specific datasets)
+    --verbose                              # Output detailed logs for troubleshooting and monitoring progress
+
+

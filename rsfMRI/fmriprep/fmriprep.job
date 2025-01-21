@@ -1,0 +1,59 @@
+#!/bin/bash 
+# ------------------------------------------------------------------------------
+# Script for running fMRI preprocessing with FMRIPREP for single-subject data.
+# This script uses Singularity to run the FMRIPREP container to preprocess fMRI data
+# for a specific participant, using the BIDS format. It is designed to be executed 
+# in a SLURM batch environment with job array indexing to process multiple subjects in parallel.
+#
+# Parameters:
+# - `--job-name`: Specifies the job name as `fmriprep_single`.
+# - `--partition`: Submits the job to the `bme_quick` queue.
+# - `--time`: Sets a time limit of 3 hours for the job.
+# - `--cpus-per-task`: Allocates 8 CPU cores for the job.
+# - `-o`: Defines the output file for standard output (`fmriprep.out`).
+# - `-e`: Defines the error file for standard error output (`fmriprep.err`).
+# - `--array`: Submits an array job to process multiple participants from index 0 to 132.
+# 
+# Reference
+# fMRIprep: https://fmriprep.org/en/stable/
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=fmriprep_single         # Job name (used for tracking)
+#SBATCH --partition=bme_quick              # Queue for quicker computation (bme_quick)
+#SBATCH --time=3:00:00                     # Time limit for the job (3 hours)
+#SBATCH --cpus-per-task=8                  # Number of CPU cores to allocate per task
+#SBATCH -o fmriprep.out                    # Standard output file
+#SBATCH -e fmriprep.err                    # Error output file
+#SBATCH --array=0-132                      # Array job index (process participants from 0 to 132)
+
+# Load Singularity module and set environment variables
+# - Singularity is used to run the FMRIPREP Docker container for fMRI preprocessing.
+module load apps/7/singularity/3.5.2       # Load Singularity module (version 3.5.2)
+export bidsdir=$HOME/BIDS_Data/             # Set the BIDS data directory
+work_dir=$HOME/BIDS_Data/fmriprep_work      # Define the working directory for FMRIPREP temporary files
+
+# Set participant-specific variables and define paths
+# - Creates an array of participant IDs, sets directories for raw and processed data.
+cd $HOME/BIDS_Data                         # Navigate to the BIDS data directory
+participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-01, sub-02, etc.)
+
+# Run FMRIPREP using Singularity
+# - This command runs the FMRIPREP container to preprocess the fMRI data of a specific participant.
+cd $HOME/fmriprep/                          # Navigate to the directory where the FMRIPREP Singularity container is located
+
+singularity run fmriprep-22.1.1.sif \       # Run the FMRIPREP container version 22.1.1
+    $bidsdir/${participant[$SLURM_ARRAY_TASK_ID]}/raw \  # Input directory for raw BIDS data of the specific participant
+    $bidsdir/derivative \                   # Output directory for the preprocessed data
+    participant                            # Process data for the current participant in array mode
+    --notrack                               # Disable tracking of the FMRIPREP execution
+    -w $work_dir                            # Set the working directory for temporary FMRIPREP files
+    --participant-label ${participant[$SLURM_ARRAY_TASK_ID]} \  # Process the current participant based on SLURM array task ID
+    --skip_bids_validation                 # Skip BIDS validation step (useful if data is already BIDS-compliant)
+    --output-spaces MNI152NLin2009cAsym     # Output preprocessed data in MNI152 space (Asymmetrical 1mm template)
+    --fs-license-file $HOME/freesurfer/freesurfer/license.txt \  # Specify the location of the FreeSurfer license file
+    --no-submm-recon                       # Skip submillimeter reconstructions (for faster processing)
+    --use-syn-sdc                          # Use SyN (Symmetric Normalization) for susceptibility distortion correction
+    --dummy-scans 5                         # Specify the number of dummy scans to discard (useful for MRI scanner stabilization)
+    --cifti-output 91k                     # Output CIFTI files with a 91k resolution for cortical surface-based analysis
+
+

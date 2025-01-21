@@ -1,0 +1,63 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# Script to perform Tract-Based Spatial Statistics (TBSS) preprocessing using FSL.
+# This script processes fractional anisotropy (FA) images by preparing, registering, 
+# skeletonizing, and projecting them for voxel-wise statistical analysis.
+#
+# Parameters:
+# - `--job-name`: Specifies the job name as `fsl2`.
+# - `--partition`: Selects the `bme_cpu` queue for execution.
+# - `--time`: Allocates a maximum runtime of 20 hours for the job.
+# - `--cpus-per-task`: Allocates 8 CPU cores per task for computation.
+# - `--mail-user`: Placeholder for the email address to receive job notifications.
+# - `--mail-type`: Sends notifications on job BEGIN, END, FAIL, or for ARRAY_TASKS.
+# - `--mem`: Allocates 8 GB of memory per task.
+# - `--array`: Specifies an array job range (0 in this case, for a single job).
+# 
+# Output:
+# - Preprocessed FA images and skeletonized data are stored in the same directory.
+# - Ready for further statistical analysis using TBSS or other FSL tools.
+# 
+# Reference
+# FSL: https://fsl.fmrib.ox.ac.uk/fsl/docs/#/diffusion/index
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=fsl2                    # Job name
+#SBATCH --partition=bme_cpu                # Partition/queue for the job
+#SBATCH --time=20:00:00                    # Maximum runtime (20 hours)
+#SBATCH --cpus-per-task=8                  # Number of CPU cores allocated
+#SBATCH --mail-user=""                     # Email for job notifications
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Types of job notifications
+#SBATCH --mem=8g                           # Memory allocation (8 GB)
+#SBATCH --array=0                          # Array job specification (only 1 task)
+
+# Load the required FSL module and set up the FSL environment
+module load apps/fsl/6.0                   # Load FSL version 6.0
+source ${FSLDIR}/etc/fslconf/fsl.sh        # Initialize FSL environment variables
+
+# Navigate to the directory containing the FA images for TBSS
+cd $HOME/BIDS_Data/newderivative/TBSS_FA   # Move to the TBSS FA directory
+
+# Step 1: Preprocess FA images
+# tbss_1_preproc prepares all FA images by thresholding and aligning them to a common space.
+# The `*_FA.nii.gz` pattern matches all FA images in the directory.
+tbss_1_preproc *_FA.nii.gz                 # Prepare FA images for further processing
+
+# Step 2: Register FA images
+# tbss_2_reg aligns all FA images to the standard FMRIB58 FA template.
+# The `-t` option specifies the target template (`FSL_HCP1065_FA_1mm.nii.gz`).
+tbss_2_reg -t $HOME/fsl/FSL_HCP1065_FA_1mm.nii.gz # Register FA images to standard space
+
+# Step 3: Post-registration processing
+# tbss_3_postreg skeletonizes the registered FA images, creating a skeleton mask 
+# that captures the centers of white matter tracts.
+# The `-S` option specifies the use of an improved skeletonization algorithm.
+tbss_3_postreg -S                          # Skeletonize the registered FA images
+
+# Step 4: Projection onto the skeleton
+# tbss_4_prestats projects FA values onto the skeleton for voxel-wise statistical analysis.
+# The `0.2` argument specifies the FA threshold; voxels with FA values below this are excluded.
+tbss_4_prestats 0.2                        # Project FA values onto the skeleton with FA > 0.2
+
+
+

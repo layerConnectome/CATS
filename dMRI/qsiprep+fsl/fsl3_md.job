@@ -1,0 +1,42 @@
+#!/bin/bash 
+# ------------------------------------------------------------------------------
+# Script to perform Tract-Based Spatial Statistics (TBSS) preprocessing using FSL.
+# This script processes non-FA diffusion maps (e.g., MD).
+#
+# Parameters:
+# - `--job-name`: Specifies the job name as `fsl3`.
+# - `--partition`: Selects the `bme_cpu` queue for execution.
+# - `--time`: Allocates a maximum runtime of 20 hours for the job.
+# - `--cpus-per-task`: Allocates 8 CPU cores per task for computation.
+# - `--mail-user`: Placeholder for the email address to receive job notifications.
+# - `--mail-type`: Sends notifications on job BEGIN, END, FAIL, or for ARRAY_TASKS.
+# - `--mem`: Allocates 8 GB of memory per task.
+# - `--array`: Specifies an array job range (0 in this case, for a single job).
+# 
+# Output:
+# - Preprocessed MD images and skeletonized data are stored in the same directory.
+# - Ready for further statistical analysis using TBSS or other FSL tools.
+# 
+# Reference
+# FSL: https://fsl.fmrib.ox.ac.uk/fsl/docs/#/diffusion/index
+# ------------------------------------------------------------------------------
+
+#SBATCH --job-name=fsl3                         # Job name
+#SBATCH --partition=bme_cpu                 # Partition/queue
+#SBATCH --time=2:00:00                          # Maximum runtime
+#SBATCH --cpus-per-task=8                    # CPUs per task
+#SBATCH --mail-user=""                          # Email for notifications
+#SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS # Notification types
+#SBATCH --mem=8g                                # Memory allocation (8 GB)
+#SBATCH --array=0                                  # Job array range
+
+
+# Load FSL module
+module load apps/fsl/6.0
+source ${FSLDIR}/etc/fslconf/fsl.sh         # Source FSL environment
+
+# Navigate to the directory containing the MD images for TBSS
+cd $HOME/hcp-d/derivatives/TBSS
+
+# Apply the original nonlinear registration to the MD data, merge all subjects' warped MD data into a 4D file stats/all_MD, project this onto the original mean FA skeleton (using the original FA data to find the projection vectors), resulting in the 4D projected data
+tbss_non_FA MD
