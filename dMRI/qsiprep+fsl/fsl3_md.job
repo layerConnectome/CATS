@@ -36,7 +36,7 @@ module load apps/fsl/6.0
 source ${FSLDIR}/etc/fslconf/fsl.sh         # Source FSL environment
 
 # Navigate to the directory containing the MD images for TBSS
-cd $HOME/hcp-d/derivatives/TBSS
+cd $HOME/BIDS_Data/derivatives/TBSS
 
 # Apply the original nonlinear registration to the MD data, merge all subjects' warped MD data into a 4D file stats/all_MD, project this onto the original mean FA skeleton (using the original FA data to find the projection vectors), resulting in the 4D projected data
 tbss_non_FA MD

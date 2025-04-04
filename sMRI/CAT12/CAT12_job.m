@@ -10,7 +10,7 @@
 % (1) Ensure SPM12 and CAT12 are installed and accessible in your MATLAB path.
 % (2) Update the `data` field to specify the path to the T1-weighted MRI data 
 %     (in NIfTI format). The path should include the filename and volume index 
-%     (e.g., `sub-CQ1251_T1w.nii,1`).
+%     (e.g., `sub-001_T1w.nii,1`).
 % (3) Adjust other parameters if needed, such as the number of processing cores 
 %     (`nproc`) or atlas selection in the ROI menu.
 % (4) Save the script and execute it within MATLAB using the `spm_jobman` command 
@@ -43,7 +43,7 @@
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
 matlabbatch{1}.spm.tools.cat.estwrite.data = {                                           
-                                              '/public/home/mazhw_i/BIDS_Data/sub-CQ1251/anat/sub-CQ1251_T1w.nii,1'
+                                              '/public/home/mazhw_i/BIDS_Data/sub-001/anat/sub-001_T1w.nii,1'
                                               };
 matlabbatch{1}.spm.tools.cat.estwrite.data_wmh = {''};
 matlabbatch{1}.spm.tools.cat.estwrite.nproc = 8;

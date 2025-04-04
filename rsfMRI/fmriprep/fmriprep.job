@@ -12,7 +12,7 @@
 # - `--cpus-per-task`: Allocates 8 CPU cores for the job.
 # - `-o`: Defines the output file for standard output (`fmriprep.out`).
 # - `-e`: Defines the error file for standard error output (`fmriprep.err`).
-# - `--array`: Submits an array job to process multiple participants from index 0 to 132.
+# - `--array`: Submits an array job to process multiple participants from index 0 to 135.
 # 
 # Reference
 # fMRIprep: https://fmriprep.org/en/stable/
@@ -24,7 +24,7 @@
 #SBATCH --cpus-per-task=8                  # Number of CPU cores to allocate per task
 #SBATCH -o fmriprep.out                    # Standard output file
 #SBATCH -e fmriprep.err                    # Error output file
-#SBATCH --array=0-132                      # Array job index (process participants from 0 to 132)
+#SBATCH --array=0-135                      # Array job index (process participants from 0 to 135)
 
 # Load Singularity module and set environment variables
 # - Singularity is used to run the FMRIPREP Docker container for fMRI preprocessing.
@@ -35,7 +35,7 @@ work_dir=$HOME/BIDS_Data/fmriprep_work      # Define the working directory for F
 # Set participant-specific variables and define paths
 # - Creates an array of participant IDs, sets directories for raw and processed data.
 cd $HOME/BIDS_Data                         # Navigate to the BIDS data directory
-participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-01, sub-02, etc.)
+participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-001, sub-002, etc.)
 
 # Run FMRIPREP using Singularity
 # - This command runs the FMRIPREP container to preprocess the fMRI data of a specific participant.

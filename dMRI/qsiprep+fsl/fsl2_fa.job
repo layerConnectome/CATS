@@ -36,7 +36,7 @@ module load apps/fsl/6.0                   # Load FSL version 6.0
 source ${FSLDIR}/etc/fslconf/fsl.sh        # Initialize FSL environment variables
 
 # Navigate to the directory containing the FA images for TBSS
-cd $HOME/hcp-d/derivatives/TBSS # Move to the TBSS FA directory
+cd $HOME/BIDS_Data/derivatives/TBSS # Move to the TBSS FA directory
 
 # Step 1: Preprocess FA images
 # tbss_1_preproc prepares all FA images by thresholding and aligning them to a common space.

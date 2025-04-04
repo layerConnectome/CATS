@@ -40,7 +40,7 @@
 #SBATCH --mail-user=""                    # Email for notifications (add your email address)
 #SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Email notifications for job states
 #SBATCH --mem=8g                          # Memory allocation (8 GB per job)
-#SBATCH --array=0-132                     # Array job index range (adjust as needed)
+#SBATCH --array=0-135                     # Array job index range (adjust as needed)
 
 # Set up FreeSurfer environment
 export FREESURFER_HOME=/public/home/mazhw_i/freesurfer/freesurfer   # Path to FreeSurfer
@@ -68,12 +68,12 @@ mris_anatomical_stats \
     ${files[$SLURM_ARRAY_TASK_ID]//.nii} lh
 
 # Step 3: Create a summary table of left hemisphere LGI thickness measures
-# - `--subjects CQ_*`: Includes subjects matching the `CQ_*` naming pattern.
+# - `--subjects sub-*`: Includes subjects matching the `sub-*` naming pattern.
 # - `--hemi lh`: Specifies left hemisphere.
 # - `--meas thickness`: Extracts thickness measures.
 # - `--parc aparc.a2009s_lgi`: Specifies the parcellation scheme.
 # - `--tablefile`: Output file for the summary table.
-aparcstats2table --subjects CQ_* --hemi lh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_lh.txt
+aparcstats2table --subjects sub-* --hemi lh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_lh.txt
 
 # Step 4: Generate LGI statistics for the right hemisphere
 # - Similar to the left hemisphere, but with `rh` for the right hemisphere.
@@ -85,7 +85,7 @@ mris_anatomical_stats \
 
 # Step 5: Create a summary table of right hemisphere LGI thickness measures
 # - Similar to the left hemisphere summary table but for the right hemisphere.
-aparcstats2table --subjects CQ_* --hemi rh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_rh.txt
+aparcstats2table --subjects sub-* --hemi rh --meas thickness --skip --parc aparc.a2009s_lgi --tablefile a2009s_lgi_rh.txt
 
 
 

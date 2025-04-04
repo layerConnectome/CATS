@@ -23,7 +23,7 @@
 # - `SUBJECTS_DIR`: Directory containing the input data and output results.
 #
 # Example:
-# - If there are 133 T1-weighted MRI files in `SUBJECTS_DIR`, set `--array=0-132`.
+# - If there are 133 T1-weighted MRI files in `SUBJECTS_DIR`, set `--array=0-135`.
 # - Adjust `OMP_NUM_THREADS` to match the number of CPUs per task.
 #
 # Notes:
@@ -43,7 +43,7 @@
 #SBATCH --mail-user=""                    # Email for notifications (add your email)
 #SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Email notifications for job states
 #SBATCH --mem=8g                          # Memory allocation per job (8 GB)
-#SBATCH --array=0-132                     # Array job index range (adjust to match the number of files)
+#SBATCH --array=0-135                     # Array job index range (adjust to match the number of files)
 
 # Set up FreeSurfer environment
 export FREESURFER_HOME=/public/home/mazhw_i/freesurfer/freesurfer   # Path to FreeSurfer

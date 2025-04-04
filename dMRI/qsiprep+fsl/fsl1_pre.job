@@ -11,7 +11,7 @@
 # - `--mem`: Allocates 20 GB of memory for processing.
 # - `-o`: Specifies the file for standard output logs (`fsl.out`).
 # - `-e`: Specifies the file for error logs (`fsl.err`).
-# - `--array`: Processes 133 participants using an array job from index 0 to 132.
+# - `--array`: Processes 136 participants using an array job from index 0 to 135.
 # 
 # Outputs:
 # - FA and MD images are stored for further processing or analysis (e.g., TBSS).
@@ -24,26 +24,26 @@
 #SBATCH --mem=20g                           # Memory allocation (20 GB)
 #SBATCH -o fsl.out                          # Standard output log
 #SBATCH -e fsl.err                          # Error log
-#SBATCH --array=0-132                       # Array job specification
+#SBATCH --array=0-135                       # Array job specification
 
 # Load FSL module and initialize the FSL environment
 module load apps/fsl/6.0                    # Load FSL version 6.0
 . ${FSLDIR}/etc/fslconf/fsl.sh              # Initialize FSL environment variables
 
 # Navigate to the base directory containing preprocessed participant data
-cd $HOME/hcp-d/derivatives/qsiprep          # Base directory for QSIPrep derivatives
-participant=(sub-HCD???????)                # Array of participant IDs matching the pattern
+cd $HOME/BIDS_Data/derivatives/qsiprep          # Base directory for QSIPrep derivatives
+participant=(sub-???)                # Array of participant IDs matching the pattern
 
 # Prepare path variables for participant data
-PATHS=($HOME/hcp-d/derivatives/qsiprep/sub*/dwi/) # Paths to DWI folders
+PATHS=($HOME/BIDS_Data/derivatives/qsiprep/sub*/dwi/) # Paths to DWI folders
 path=${PATHS[$SLURM_ARRAY_TASK_ID]}         # Select path for the current participant
 cd $path                                    # Move to the participant's DWI folder
 
 # ------------------------------------------------------------------------------
-# Processing for CQ Dataset (currently commented out)
+# Processing for CATS Dataset 
 # - Uses FSL `dtifit` to fit the diffusion tensor model and calculate metrics.
 # - Outputs DTI metrics including fractional anisotropy (FA) and mean diffusivity (MD).
-#
+
 # dtifit -k: Input preprocessed DWI image.
 # -o: Output prefix for results.
 # -m: Brain mask file.
@@ -51,49 +51,49 @@ cd $path                                    # Move to the participant's DWI fold
 # -b: BVAL file (diffusion weighting factors).
 # --save_tensor: Saves the tensor image.
 # ------------------------------------------------------------------------------
-## FOR CQ DATA (Commented)
-# dtifit -k ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.nii \
-#        -o data \
-#        -m ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-brain_mask.nii \
-#        -r ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bvec \
-#        -b ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bval \
-#        --save_tensor  
+# FOR CATS DATA 
+dtifit -k ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.nii \
+       -o data \
+       -m ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-brain_mask.nii \
+       -r ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bvec \
+       -b ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bval \
+       --save_tensor  
 
-# ------------------------------------------------------------------------------
-# Processing for HCP-D Dataset
-# - Utilizes custom Python scripts from the Scilpy library for DTI metrics calculation.
-# - Steps:
-#   1. Extracts a single diffusion shell with `scil_dwi_extract_shell.py`.
-#   2. Converts the brain mask to the required format with `convert.py`.
-#   3. Computes DTI metrics (FA, MD) with `scil_dti_metrics.py`.
-# ------------------------------------------------------------------------------
-# Extract a single diffusion shell (b=0 and b=1500) from the DWI data.
-# --tolerance: Specifies the tolerance for shell selection.
-# -v: Verbose output.
-python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/scil_dwi_extract_shell.py \
-    --tolerance 100 \
-    -v ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.nii.gz \
-       ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bval \
-       ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bvec \
-       0 1500 \
-       data_ud_1_shell.nii.gz data_ud_1_shell.bval data_ud_1_shell.bvec
+# # ------------------------------------------------------------------------------
+# # Processing for HCP-D Dataset
+# # - Utilizes custom Python scripts from the Scilpy library for DTI metrics calculation.
+# # - Steps:
+# #   1. Extracts a single diffusion shell with `scil_dwi_extract_shell.py`.
+# #   2. Converts the brain mask to the required format with `convert.py`.
+# #   3. Computes DTI metrics (FA, MD) with `scil_dti_metrics.py`.
+# # ------------------------------------------------------------------------------
+# # Extract a single diffusion shell (b=0 and b=1500) from the DWI data. Processing for HCP Dataset
+# # --tolerance: Specifies the tolerance for shell selection.
+# # -v: Verbose output.
+# python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/scil_dwi_extract_shell.py \
+#     --tolerance 100 \
+#     -v ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.nii.gz \
+#        ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bval \
+#        ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-preproc_dwi.bvec \
+#        0 1500 \
+#        data_ud_1_shell.nii.gz data_ud_1_shell.bval data_ud_1_shell.bvec
 
-# Convert the brain mask file to the required format for downstream processing.
-python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/convert.py \
-    ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-brain_mask.nii.gz \
-    data_mask.nii.gz
+# # Convert the brain mask file to the required format for downstream processing.
+# python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/convert.py \
+#     ${participant[$SLURM_ARRAY_TASK_ID]}_space-T1w_desc-brain_mask.nii.gz \
+#     data_mask.nii.gz
 
-# Compute DTI metrics (FA, MD) using the extracted diffusion shell and brain mask.
-python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/scil_dti_metrics.py \
-    --mask data_mask.nii.gz \
-    data_ud_1_shell.nii.gz data_ud_1_shell.bval data_ud_1_shell.bvec
+# # Compute DTI metrics (FA, MD) using the extracted diffusion shell and brain mask.
+# python /public/bme/home/mazhw_a/hcp-d/fsl/scilpy-master/scil_dti_metrics.py \
+#     --mask data_mask.nii.gz \
+#     data_ud_1_shell.nii.gz data_ud_1_shell.bval data_ud_1_shell.bvec
 
 # ------------------------------------------------------------------------------
 # Copy the resulting FA and MD images to their respective directories.
 # - FA images are stored in the `TBSS` directory.
 # - MD images are stored in the `MD` directory.
 # ------------------------------------------------------------------------------
-cp fa.nii.gz $HOME/hcp-d/derivatives/TBSS/${participant[$SLURM_ARRAY_TASK_ID]}_dti_FA.nii.gz
-cp md.nii.gz $HOME/hcp-d/derivatives/MD/${participant[$SLURM_ARRAY_TASK_ID]}_dti_MD.nii.gz
+cp fa.nii.gz $HOME/BIDS_Data/derivatives/TBSS/${participant[$SLURM_ARRAY_TASK_ID]}_dti_FA.nii.gz
+cp md.nii.gz $HOME/BIDS_Data/derivatives/MD/${participant[$SLURM_ARRAY_TASK_ID]}_dti_MD.nii.gz
 
 

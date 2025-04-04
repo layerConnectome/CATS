@@ -14,7 +14,7 @@
 # - `--time`: Allocates a maximum runtime of 10 hours.
 # - `--cpus-per-task`: Assigns 8 CPU cores for each task.
 # - `--mem`: Allocates 8 GB of memory per task.
-# - `--array`: Specifies the range of participants to process (0-132).
+# - `--array`: Specifies the range of participants to process (0-135).
 # - `--mail-user`: Email address for job notifications (set appropriately).
 # - `--mail-type`: Specifies when to send job status emails (begin, end, fail, etc.).
 #
@@ -33,7 +33,7 @@
 #SBATCH --mail-user=""                     # Email for job notifications (update as needed)
 #SBATCH --mail-type=BEGIN,END,FAIL,ARRAY_TASKS  # Email notifications for job states
 #SBATCH --mem=8g                           # Memory allocation (8 GB per task)
-#SBATCH --array=0-132                      # Job array index range for participants
+#SBATCH --array=0-135                      # Job array index range for participants
 
 # Load Singularity module for running containerized applications
 module load apps/7/singularity/3.5.2       # Load Singularity version 3.5.2

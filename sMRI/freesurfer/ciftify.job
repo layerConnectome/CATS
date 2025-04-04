@@ -48,7 +48,7 @@ export bidsdir=$HOME/freesurfer/practice/CQ_data  # Base directory for input dat
 
 # Change to the directory containing T1-weighted NIfTI files
 cd ${bidsdir}/T1w/
-subjects=(CQ_*.nii)                   # Create an array of all NIfTI files
+subjects=(sub-*.nii)                   # Create an array of all NIfTI files
 
 # Change to the directory containing the Singularity container
 cd $HOME/ciftify

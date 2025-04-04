@@ -12,7 +12,7 @@
 # - `--cpus-per-task`: Allocates 8 CPU cores per task.
 # - `-o`: Defines the output file for standard output (`xcp.out`).
 # - `-e`: Defines the error output file for standard error (`xcp.err`).
-# - `--array`: Defines an array job to process participants from index 0 (for a list of participants, e.g., `sub-CQ????`).
+# - `--array`: Defines an array job to process participants from index 0 (for a list of participants, e.g., `sub-???`).
 #
 # Reference
 # fMRIprep: https://xcp-d.readthedocs.io/en/latest/index.html
@@ -33,9 +33,9 @@ module load apps/7/singularity/3.5.2         # Load Singularity module (version 
 export bidsdir=$HOME/BIDS_Data/derivative    # Set the path to the derivative BIDS directory where preprocessed data is stored
 
 # Set participant-specific variables and define paths
-# - Creates an array of participant IDs based on `sub-CQ????` format, processes participants one by one in parallel.
+# - Creates an array of participant IDs based on `sub-???` format, processes participants one by one in parallel.
 cd $HOME/BIDS_Data                           # Navigate to the BIDS data directory
-participant=(sub-CQ????)                     # Create an array of participant IDs (e.g., sub-CQ0001, sub-CQ0002, etc.)
+participant=(sub-???)                     # Create an array of participant IDs (e.g., sub-001, sub-002, etc.)
 
 # Run XCP post-processing using Singularity container
 # - This command runs the XCP container to apply additional post-processing steps to fMRI data.

@@ -36,8 +36,8 @@ export bidsdir=$HOME/BIDS_Data             # Set the directory where BIDS data i
 # Set participant-specific variables and working directory
 # - Defines the array of participant IDs and sets the working directory for QSIPrep.
 cd $HOME/BIDS_Data                         # Navigate to the BIDS data directory
-participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-01, sub-02, etc.)
-work_dir=$HOME/hcp-d/out/qsiprep_work      # Define the working directory for QSIPrep output
+participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-001, sub-002, etc.)
+work_dir=$HOME/BIDS_Data/qsiprep_work      # Define the working directory for QSIPrep output
 
 # Run QSIPrep using Singularity
 # - Runs the `qsiprep` container with various options to preprocess the DWI data.

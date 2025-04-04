@@ -31,7 +31,7 @@
 #
 # Notes:
 # - Input subject directories must follow FreeSurfer's naming conventions.
-# - Update the `--array` and subject naming patterns (`CQ_*`) as needed.
+# - Update the `--array` and subject naming patterns (`sub-*`) as needed.
 #
 # Reference:
 # - FreeSurfer Documentation: https://surfer.nmr.mgh.harvard.edu/
@@ -68,15 +68,15 @@ asegstats2table --subjects * --meas volume --tablefile aseg_stats.txt --common-s
 
 # Generate cortical thickness tables for the left hemisphere
 # - `--hemi lh`: Process the left hemisphere.
-# - `--subjects CQ_*`: Include subjects with IDs matching the pattern `CQ_*`.
+# - `--subjects sub-*`: Include subjects with IDs matching the pattern `sub-*`.
 # - `--parc aparc.a2009s`: Use the `aparc.a2009s` parcellation scheme.
 # - `--meas thickness`: Extract cortical thickness measures.
 # - `-t lh.a2009s.thickness.txt`: Output file for the left hemisphere.
 # - `--skip`: Skip subjects with missing data.
-aparcstats2table --hemi lh --subjects CQ_* --parc aparc.a2009s --meas thickness -t lh.a2009s.thickness.txt --skip
+aparcstats2table --hemi lh --subjects sub-* --parc aparc.a2009s --meas thickness -t lh.a2009s.thickness.txt --skip
 
 # Generate cortical thickness tables for the right hemisphere
-aparcstats2table --hemi rh --subjects CQ_* --parc aparc.a2009s --meas thickness -t rh.a2009s.thickness.txt --skip
+aparcstats2table --hemi rh --subjects sub-* --parc aparc.a2009s --meas thickness -t rh.a2009s.thickness.txt --skip
 
 
 
