@@ -37,10 +37,23 @@ export bidsdir=$HOME/BIDS_Data             # Set the directory where BIDS data i
 # - Defines the array of participant IDs and sets the working directory for QSIPrep.
 cd $HOME/BIDS_Data                         # Navigate to the BIDS data directory
 participant=(sub-*)                        # Create an array of participant IDs (e.g., sub-001, sub-002, etc.)
-work_dir=$HOME/BIDS_Data/qsiprep_work      # Define the working directory for QSIPrep output
+
+# Load FSL module
+module load apps/fsl/6.0
+source ${FSLDIR}/etc/fslconf/fsl.sh         # Source FSL environment
+
+# Define participant paths and input files
+PATHS=($HOME/BIDS_Data/sub*/dwi/)  # Paths to dMRI data
+path=${PATHS[$SLURM_ARRAY_TASK_ID]}         # Path for the current participant
+sub=${participant[$SLURM_ARRAY_TASK_ID]}_dwi.nii    # Input diffusion data
+# Preprocessing
+cd $path                                    # Navigate to participant's dMRI directory
+fslreorient2std ${sub} ${sub}             # Reorient diffusion data to standard orientation
+rename ${participant[$SLURM_ARRAY_TASK_ID]}_dwi.nii dwi_bak.nii ${participant[$SLURM_ARRAY_TASK_ID]}_dwi.nii
 
 # Run QSIPrep using Singularity
 # - Runs the `qsiprep` container with various options to preprocess the DWI data.
+work_dir=$HOME/BIDS_Data/qsiprep_work      # Define the working directory for QSIPrep output
 cd $HOME/qsiprep/                          # Navigate to the folder where the QSIPrep Singularity container is stored
 
 singularity run qsiprep-latest.sif \        # Execute the QSIPrep container
